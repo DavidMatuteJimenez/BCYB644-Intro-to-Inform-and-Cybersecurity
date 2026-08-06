@@ -88,6 +88,8 @@
 
 ### 3.5 Deploy Kali Linux on UTM
 
+Kali Linux was deployed as the attacker VM following Kali's official documentation. Since Kali provides a well-maintained, standard installation process (unlike the ARM64-specific issues encountered with Ubuntu Server), this section is intentionally brief — the official guides cover the process more thoroughly than a re-documentation here would.
+
 **Step 19:** Follow Kali Linux's official UTM installation guide: https://www.kali.org/docs/virtualization/install-utm-guest-vm/
 
 This guide will walk you through:
@@ -95,6 +97,8 @@ This guide will walk you through:
 * Creating a new virtual machine in UTM
 * Allocating CPU, RAM, and storage resources
 * Importing the Kali Linux image
+
+![Kali Linux VM Summary in UTM](WazuhImages/101-kali-vm-summary-utm.png)
 
 ### 3.6 Setup and Configure Kali Linux
 
@@ -115,19 +119,25 @@ This guide will walk you through:
 
 **Step 22:** Press Enter to login
 
+![Kali Login Screen](WazuhImages/100-kali-login-screen.png)
+
+**Step 23:** Confirm the VM is networked correctly by checking its assigned IP address.
+
+![Kali IP Address Check](WazuhImages/41-kali-ip-address-check.png)
+
 ---
 
 ### 3.8 Confirm Network Connectivity Between VMs
 
-**Step 23:** With both VMs running in UTM's Shared Network mode, ping VM1 from Kali to confirm connectivity.
+**Step 24:** With both VMs running in UTM's Shared Network mode, ping VM1 from Kali to confirm connectivity.
 
 ![Ping Kali to VM1 Success](WazuhImages/40-ping-kali-to-vm1-success.png)
 
-**Step 24:** Ping Kali from VM1 to confirm bidirectional connectivity.
+**Step 25:** Ping Kali from VM1 to confirm bidirectional connectivity.
 
 ![Ping VM1 to Kali Success](WazuhImages/42-ping-vm1-to-kali-success.png)
 
-**Step 25:** Confirm SSH access from the host Mac terminal into VM1.
+**Step 26:** Confirm SSH access from the host Mac terminal into VM1.
 
 ![SSH Login Success VM1](WazuhImages/39-ssh-login-success-vm1.png)
 
