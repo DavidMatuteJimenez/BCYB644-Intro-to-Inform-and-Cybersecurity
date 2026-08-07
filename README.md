@@ -1,26 +1,31 @@
 # Wazuh IR Lab: Detecting SSH Brute-Force Attacks on a Compromised Endpoint
 
-## 1. Title
 - **Tool:** Wazuh (open-source SIEM/XDR)
 - **Author:** David Matute-Jimenez
-- **Course:** [course name]
+- **Course:** BCYB644-Intro-to-Inform-and-Cybersecurity
 
 ---
 
-## 2. Tool Overview
+## 1. Tool Overview
 
-*(TBD — brief summary of Wazuh: what it is, what problem it solves, why it's relevant to incident response)*
+Wazuh is a free, open-source security platform that combines SIEM (Security Information and Event Management) and XDR (Extended Detection and Response) capabilities. It collects log data from monitored endpoints, correlates that data against a rule engine, and generates real-time alerts when suspicious or malicious activity is detected.
+
+Wazuh is built around three main components: a lightweight **agent** installed on each monitored endpoint that collects and forwards log data; a central **manager** that analyzes that data against its rule engine and decoders; and an **indexer and dashboard** that store alerts and logs and provide a web interface for investigation.
+
+Wazuh solves several core problems in cybersecurity: it enables near real-time threat detection (such as flagging repeated failed login attempts as a possible brute-force attack), gives analysts centralized visibility across an environment instead of manually checking individual system logs, maps alerts to MITRE ATT&CK techniques for deeper context, and supports custom detection rules for threats the default ruleset doesn't cover.
+
+In the incident response lifecycle, Wazuh is most directly tied to the **Identification** phase — it turns raw log data into an actionable alert an analyst can investigate. This project demonstrates that role directly: Wazuh detects an SSH brute-force attack against a simulated victim endpoint, generates an alert, and supports the follow-up analysis (custom rule creation, MITRE mapping) that comes after initial detection.
 
 ---
 
-## 3. Tool Requirements, Setup & Workflow
+## 2. Tool Requirements, Setup & Workflow
 
 ### VM Setup
 **Author: David**
 
 ## To Run This Project (Step-By-Step Guide)
 
-### 3.1 Download and Install UTM
+### 2.1 Download and Install UTM
 
 **Step 1:** Visit https://mac.getutm.app/
 
@@ -38,7 +43,7 @@
 
 ---
 
-### 3.2 Download Ubuntu Server 24.04.4 (ARM64)
+### 2.2 Download Ubuntu Server 24.04.4 (ARM64)
 
 **Step 7:** Visit https://ubuntu.com/download/server and select the **64-bit ARM (AArch64) server install image** — UTM on Apple Silicon requires ARM64, not the standard x86 ISO.
 
@@ -48,7 +53,7 @@
 
 ---
 
-### 3.3 Deploy Ubuntu Server as VM1 (Wazuh Manager)
+### 2.3 Deploy Ubuntu Server as VM1 (Wazuh Manager)
 
 **Step 9:** In UTM, click **Create a New Virtual Machine** and select the Ubuntu Server ARM64 ISO as the boot image.
 
@@ -60,7 +65,7 @@
 
 ---
 
-### 3.4 Install Ubuntu Server on VM1
+### 2.4 Install Ubuntu Server on VM1
 
 **Step 12:** Boot the VM and select **Ubuntu Server** (not the minimized variant) as the installation type.
 
@@ -86,7 +91,7 @@
 
 ---
 
-### 3.5 Deploy Kali Linux on UTM
+### 2.5 Deploy Kali Linux on UTM
 
 Kali Linux was deployed as the attacker VM following Kali's official documentation. Since Kali provides a well-maintained, standard installation process (unlike the ARM64-specific issues encountered with Ubuntu Server), this section is intentionally brief — the official guides cover the process more thoroughly than a re-documentation here would.
 
@@ -100,7 +105,7 @@ This guide will walk you through:
 
 ![Kali Linux VM Summary in UTM](WazuhImages/101-kali-vm-summary-utm.png)
 
-### 3.6 Setup and Configure Kali Linux
+### 2.6 Setup and Configure Kali Linux
 
 **Step 20:** Follow Kali Linux's installation and setup guide: https://www.kali.org/docs/installation/hard-disk-install/
 
@@ -111,7 +116,7 @@ This guide will walk you through:
 * System updates and package configuration
 * Desktop environment setup
 
-### 3.7 Login to Kali Linux
+### 2.7 Login to Kali Linux
 
 **Step 21:** At the Kali Linux login screen, enter:
 * **Username:** `kali`
@@ -127,7 +132,7 @@ This guide will walk you through:
 
 ---
 
-### 3.8 Confirm Network Connectivity Between VMs
+### 2.8 Confirm Network Connectivity Between VMs
 
 **Step 24:** With both VMs running in UTM's Shared Network mode, ping VM1 from Kali to confirm connectivity.
 
@@ -143,30 +148,38 @@ This guide will walk you through:
 
 ---
 
-### 3.9 Wazuh Installation on VM1
+### 2.9 Wazuh Installation on VM1
 
 *(TBD — ARM64 install script issue, disk sizing/LVM resize saga, service restart ordering fix, agent deployment)*
 
 ---
 
-## 4. Core Features
+### 2.10 Architecture Note: VM1's Dual Role
+
+**Note:** Due to hardware constraints, VM1 serves as both the Wazuh manager and the monitored endpoint (running its own Wazuh agent). In a production deployment, these roles would typically run on separate systems.
+
+VM1 (`192.168.64.4`) therefore acts as both the infrastructure running Wazuh (manager, indexer, dashboard) *and* the simulated victim endpoint — the "compromised employee laptop" targeted by the SSH brute-force attack demonstrated in Section 4.
+
+---
+
+## 3. Core Features
 
 *(TBD — Wazuh dashboard, agent-based monitoring, rule engine/decoders, wazuh-logtest, MITRE ATT&CK integration. Screenshot each as demoed.)*
 
 ---
 
-## 5. Practical Application
+## 4. Practical Application
 
 *(TBD — incident narrative: disgruntled employee laptop compromised via weak SSH creds. Hydra brute-force attack steps + output. Wazuh alerts firing, rule IDs. Custom rule + wazuh-logtest validation. MITRE ATT&CK T1110 mapping.)*
 
 ---
 
-## 6. Strengths & Limitations
+## 5. Strengths & Limitations
 
-*(TBD — Strengths: real-time detection, customizable rules, MITRE integration. Limitations/scope tradeoffs: no active-response demo, no FIM demo, RAM constraint rationale. Lessons learned: ARM64 install issue, disk sizing, service restart ordering, GRUB reboot loop.)*
+*(TBD — Strengths: real-time detection, customizable rules, MITRE integration. Limitations/scope tradeoffs: no active-response demo, no FIM demo, RAM constraint rationale — including VM1's dual manager/endpoint role (see Section 2.10). Lessons learned: ARM64 install issue, disk sizing, service restart ordering, GRUB reboot loop.)*
 
 ---
 
-## 7. References
+## 6. References
 
 *(TBD — Wazuh docs, MITRE ATT&CK, UTM/Ubuntu/Kali install guides used)*
