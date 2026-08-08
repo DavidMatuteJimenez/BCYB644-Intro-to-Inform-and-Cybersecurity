@@ -178,6 +178,8 @@ VM1 (`192.168.64.4`) therefore acts as both the infrastructure running Wazuh (ma
 
 ## 3. Core Features
 
+*This section covers all core feature categories; hands-on demonstration in Section 4 focuses specifically on Threat Intelligence (MITRE ATT&CK and Threat Hunting).*
+
 ### 3.1 Architecture: Agents, Manager, Indexer, and Dashboard
 
 Wazuh is built around four architectural components that work together to move raw data into actionable intelligence.
