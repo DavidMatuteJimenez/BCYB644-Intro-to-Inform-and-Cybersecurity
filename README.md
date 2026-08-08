@@ -43,7 +43,7 @@ In the incident response lifecycle, Wazuh is most directly tied to the **Identif
 
 **Step 4:** Allocate hardware resources. Due to the 8GB RAM constraint on the host machine, this VM was configured with 5GB RAM, 3 CPU cores, and 30GB storage.
 
-![VM1 Hardware Configuration](WazuhImages/05-utm-vm-hardware-config.png)
+![VM1 Hardware Configuration](ProjectImages/utm-vm-hardware-config.png)
 
 **Step 5:** Name the VM **VM1-Wazuh-Manager** and complete creation.
 
@@ -55,13 +55,13 @@ In the incident response lifecycle, Wazuh is most directly tied to the **Identif
 
 **Step 7:** In SSH configuration, check **Install OpenSSH server** and leave **Allow password authentication over SSH** enabled, since this is required later for the Hydra brute-force demo.
 
-![SSH Configuration](WazuhImages/23-ssh-configuration-openssh.png)
+![SSH Configuration](ProjectImages/ssh-configuration-openssh.png)
 
 **Step 8:** Complete installation, remove the installation medium, and reboot.
 
 > **Troubleshooting note:** The VM hit a GRUB reboot loop on first restart because the ISO wasn't ejected. Fixed by force-stopping the VM in UTM and manually clearing the CD/DVD drive in VM Settings before rebooting.
 
-![GRUB Reboot Loop Issue](WazuhImages/28-grub-reboot-loop-issue.png)
+![GRUB Reboot Loop Issue](ProjectImages/grub-reboot-loop-issue.png)
 
 **Step 9:** VM1 boots successfully into the installed system.
 
@@ -87,7 +87,7 @@ This guide will walk you through initial boot and configuration, partitioning an
 
 **Step 13:** Confirm the VM is networked correctly by checking its assigned IP address (`192.168.64.3`).
 
-![Kali IP Address Check](WazuhImages/41-kali-ip-address-check.png)
+![Kali IP Address Check](ProjectImages/kali-ip-address-check.png)
 
 ---
 
@@ -95,11 +95,11 @@ This guide will walk you through initial boot and configuration, partitioning an
 
 **Step 14:** With both VMs running in UTM's Shared Network mode, ping VM1 from Kali to confirm connectivity.
 
-![Ping Kali to VM1 Success](WazuhImages/40-ping-kali-to-vm1-success.png)
+![Ping Kali to VM1 Success](ProjectImages/ping-kali-to-vm1-success.png)
 
 **Step 15:** Confirm SSH access from the host Mac terminal into VM1.
 
-![SSH Login Success VM1](WazuhImages/39-ssh-login-success-vm1.png)
+![SSH Login Success VM1](ProjectImages/ssh-login-success-vm1.png)
 
 ---
 
@@ -117,7 +117,7 @@ The script immediately rejected the system, even though VM1 is genuinely 64-bit,
 ERROR: Uncompatible system. This script must be run on a 64-bit system.
 ```
 
-![Wazuh Install Architecture Error](WazuhImages/43-wazuh-install-arch-error.png)
+![Wazuh Install Architecture Error](ProjectImages/wazuh-install-arch-error.png)
 
 **Fix:** Wazuh's 4.14 branch includes proper ARM64 support. Switching to the version-specific installer resolved the issue and the install proceeded normally:
 
@@ -126,11 +126,11 @@ curl -sO https://packages.wazuh.com/4.14/wazuh-install.sh
 sudo bash ./wazuh-install.sh -a
 ```
 
-![Wazuh 4.14 Install Starts](WazuhImages/45-wazuh-414-install-starts.png)
+![Wazuh 4.14 Install Starts](ProjectImages/wazuh-414-install-starts.png)
 
 **Step 17:** Partway through, the installer failed at the **Wazuh dashboard** stage and automatically rolled back the entire installation. Investigating the install log revealed the real cause was a **disk-full error**: `df -h /` showed the root partition at only 14G total with 58% used, far less than the 30GB the VM was allocated. Ubuntu's guided LVM partitioning had under-allocated the volume group, leaving space unclaimed.
 
-![df -h Showing 58% Used](WazuhImages/50-df-h-showing-58-percent-used.png)
+![df -h Showing 58% Used](ProjectImages/df-h-showing-58-percent-used.png)
 
 **Fix:** Extended the logical volume to claim the unallocated space:
 
@@ -146,11 +146,11 @@ User: admin
 Password: ngPtuRAi?RIMgRaUEPZKHcaf9yT4XBF7
 ```
 
-![Wazuh Install Success, Credentials](WazuhImages/53-wazuh-install-success-credentials.png)
+![Wazuh Install Success, Credentials](ProjectImages/wazuh-install-success-credentials.png)
 
 **Step 19:** Logging into the dashboard initially returned a `TimeoutException` retrieving internal user configuration from the indexer, an HTTP 500 error.
 
-![Dashboard Timeout Error, Indexer](WazuhImages/61-dashboard-timeout-error-indexer.png)
+![Dashboard Timeout Error, Indexer](ProjectImages/dashboard-timeout-error-indexer.png)
 
 Diagnosis traced this back to the disk filling up a second time. The indexer's own index and log growth had consumed the remaining space, and the earlier `lvextend` fix had only reclaimed space *within* the existing 30GB virtual disk, leaving nothing left to extend into.
 
@@ -192,7 +192,7 @@ The **indexer**, built on OpenSearch, stores and indexes every alert the manager
 
 The **dashboard** is a web-based interface that queries the indexer and displays results. It does not generate or store any data itself; it is purely a visualization and investigation layer for analysts, organized into a home page (shown below) and several purpose-built modules covering each of Wazuh's feature areas.
 
-![Wazuh Dashboard Overview, Success](WazuhImages/72-wazuh-dashboard-overview-success.png)
+![Wazuh Dashboard Overview, Success](ProjectImages/wazuh-dashboard-overview-success.png)
 
 ### 3.2 Endpoint Security
 
