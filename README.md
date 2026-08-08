@@ -158,8 +158,6 @@ Diagnosis traced this back to the disk filling up a second time. The indexer's o
 
 **Step 20:** With the disk properly sized, the dashboard loaded successfully with no further errors.
 
-![Wazuh Dashboard Overview, Success](WazuhImages/72-wazuh-dashboard-overview-success.png)
-
 This closed out the Wazuh installation. VM1 was now running a stable indexer, manager, and dashboard stack with adequate disk headroom, setting up the self-monitoring configuration described in Section 2.10.
 
 ---
@@ -192,7 +190,7 @@ The **indexer**, built on OpenSearch, stores and indexes every alert the manager
 
 The **dashboard** is a web-based interface that queries the indexer and displays results. It does not generate or store any data itself; it is purely a visualization and investigation layer for analysts, organized into a home page (shown below) and several purpose-built modules covering each of Wazuh's feature areas.
 
-![Wazuh Dashboard Overview](WazuhImages/76-dashboard-overview-features.png)
+![Wazuh Dashboard Overview, Success](WazuhImages/72-wazuh-dashboard-overview-success.png)
 
 ### 3.2 Endpoint Security
 
