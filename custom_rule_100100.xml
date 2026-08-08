@@ -1,0 +1,23 @@
+<rule id="100100" level="12">
+  <if_matched_sid>5763</if_matched_sid>
+  <if_sid>5715</if_sid>
+  <same_source_ip />
+  <description>Successful SSH login from $(srcip) following brute force attempts - possible account compromise</description>
+  <mitre>
+    <id>T1110</id>
+    <id>T1078</id>
+  </mitre>
+  <group>authentication_success,brute_force_success,</group>
+</rule>
+what should i name this file:
+<rule id="100100" level="12">
+  <if_matched_sid>5763</if_matched_sid>
+  <if_sid>5715</if_sid>
+  <same_source_ip />
+  <description>Successful SSH login from $(srcip) following brute force attempts - possible account compromise</description>
+  <mitre>
+    <id>T1110</id>
+    <id>T1078</id>
+  </mitre>
+  <group>authentication_success,brute_force_success,</group>
+</rule>
