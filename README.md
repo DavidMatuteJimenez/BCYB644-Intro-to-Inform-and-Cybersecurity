@@ -300,8 +300,6 @@ This produced no match during testing. The bug was a conceptual mix-up rather th
 
 In plain terms: rule `100100` only evaluates on events that already matched rule `5715` (a successful login), and only fires if rule `5763` (brute-force detected) had *also* matched recently for the same source IP. The `<same_source_ip />` tag ensures the correlation only applies when both the failed attempts and the successful login came from the identical attacking IP, not just any brute-force alert and any login happening to occur near each other in time. When both conditions hold, the rule fires at level 12, a significant jump from `5715`'s level 3, and attaches two MITRE ATT&CK techniques: **T1110** (Brute Force) for the attack method, and **T1078** (Valid Accounts) for the fact that the attacker is now operating with a legitimate account's credentials, which is arguably the more dangerous half of the story, since a valid-account login is far harder to distinguish from normal user activity going forward.
 
-![Corrected Rule XML in local_rules.xml](ProjectImages/corrected-rule-xml-local-rules.png)
-
 ### 4.5 Validating the Rule with `wazuh-logtest`
 
 Before trusting rule `100100` against live traffic, it was validated offline using `wazuh-logtest` (introduced in Section 3.6), which allows a rule's logic to be tested against real captured log lines without needing to re-run the attack live.
