@@ -8,13 +8,13 @@
 
 ## 1. Tool Overview
 
-Wazuh is a free, open-source security platform that combines SIEM (Security Information and Event Management) and XDR (Extended Detection and Response) capabilities. It collects log data from monitored endpoints, correlates that data against a rule engine, and generates real-time alerts when suspicious or malicious activity is detected.
+Wazuh is a free, open-source security platform that combines SIEM (Security Information and Event Management) and XDR (Extended Detection and Response) capabilities. It collects log data from monitored endpoints, checks that data against a rule engine, and generates real-time alerts when something suspicious shows up.
 
-Wazuh is built around three main components: a lightweight **agent** installed on each monitored endpoint that collects and forwards log data; a central **manager** that analyzes that data against its rule engine and decoders; and an **indexer and dashboard** that store alerts and logs and provide a web interface for investigation.
+It's built around three main pieces: a lightweight **agent** installed on each monitored endpoint that collects and forwards log data; a central **manager** that runs those logs through decoders and a rule engine; and an **indexer and dashboard** that store alerts and give analysts a web interface for investigation.
 
-Wazuh solves several core problems in cybersecurity: it enables near real-time threat detection (such as flagging repeated failed login attempts as a possible brute-force attack), gives analysts centralized visibility across an environment instead of manually checking individual system logs, maps alerts to MITRE ATT&CK techniques for deeper context, and supports custom detection rules for threats the default ruleset doesn't cover.
+Wazuh's core job is turning scattered, raw log data into something an analyst can act on: catching repeated failed logins before they turn into a breach, giving a team one place to look instead of checking a dozen systems individually, tagging alerts with MITRE ATT&CK context for deeper meaning, and allowing custom rules for anything the default ruleset doesn't cover.
 
-In the incident response lifecycle, Wazuh is most directly tied to the **Identification** phase, since it turns raw log data into an actionable alert an analyst can investigate. This project demonstrates that role directly: Wazuh detects an SSH brute-force attack against a simulated victim endpoint, generates an alert, and supports the follow-up analysis (custom rule creation, MITRE mapping) that comes after initial detection.
+In the incident response lifecycle, Wazuh sits mainly in the **Identification** phase, since its core function is turning raw logs into an actionable alert. That's exactly what this project demonstrates: Wazuh detects an SSH brute-force attack against a simulated victim endpoint, generates an alert, and supports the follow-up work covered in later sections (a custom rule and MITRE mapping).
 
 ---
 
@@ -41,7 +41,7 @@ In the incident response lifecycle, Wazuh is most directly tied to the **Identif
 
 **Step 3:** In UTM, click **Create a New Virtual Machine** and select the Ubuntu Server ARM64 ISO as the boot image.
 
-**Step 4:** Allocate hardware resources. Due to the 8GB RAM constraint on the host machine, this VM was configured with 5GB RAM, 3 CPU cores, and 30GB storage.
+**Step 4:** Allocate hardware resources. With only 8GB of RAM on the host machine, this VM was configured with 5GB RAM, 3 CPU cores, and 30GB storage.
 
 ![VM1 Hardware Configuration](ProjectImages/utm-vm-hardware-config.png)
 
@@ -51,7 +51,7 @@ In the incident response lifecycle, Wazuh is most directly tied to the **Identif
 
 ### 2.4 Install Ubuntu Server on VM1
 
-**Step 6:** Boot the VM and select **Ubuntu Server** (not the minimized variant) as the installation type. Configure networking (DHCP auto-assigned IP `192.168.64.4`), guided storage using the entire disk, and the user profile (username: `dmatute`).
+**Step 6:** Boot the VM and select **Ubuntu Server** (not the minimized variant) as the installation type. Configure networking (DHCP assigned `192.168.64.4`), guided storage using the entire disk, and the user profile (username: `dmatute`).
 
 **Step 7:** In SSH configuration, check **Install OpenSSH server** and leave **Allow password authentication over SSH** enabled, since this is required later for the Hydra brute-force demo.
 
@@ -69,17 +69,17 @@ In the incident response lifecycle, Wazuh is most directly tied to the **Identif
 
 ### 2.5 Deploy Kali Linux on UTM
 
-Kali Linux was deployed as the attacker VM following Kali's official documentation. Since Kali provides a well-maintained, standard installation process (unlike the ARM64-specific issues encountered with Ubuntu Server), this section is intentionally brief; the official guides cover the process more thoroughly than a re-documentation here would.
+Kali Linux was deployed as the attacker VM following Kali's official documentation. Since Kali provides a well-maintained, standard installation process, unlike the ARM64-specific issues encountered with Ubuntu Server, this section stays brief. The official guides cover the process more thoroughly than a re-documentation here would.
 
 **Step 10:** Follow Kali Linux's official UTM installation guide: https://www.kali.org/docs/virtualization/install-utm-guest-vm/
 
-This guide will walk you through downloading the Kali Linux ARM64 image for UTM, creating a new virtual machine, allocating CPU/RAM/storage resources, and importing the Kali Linux image.
+This guide covers downloading the Kali Linux ARM64 image for UTM, creating a new virtual machine, allocating CPU/RAM/storage resources, and importing the Kali Linux image.
 
 ### 2.6 Setup and Configure Kali Linux
 
 **Step 11:** Follow Kali Linux's installation and setup guide: https://www.kali.org/docs/installation/hard-disk-install/
 
-This guide will walk you through initial boot and configuration, partitioning and disk setup, user account creation, system updates, and desktop environment setup.
+This guide covers initial boot and configuration, partitioning and disk setup, user account creation, system updates, and desktop environment setup.
 
 ### 2.7 Login to Kali Linux
 
@@ -111,7 +111,7 @@ This guide will walk you through initial boot and configuration, partitioning an
 curl -sO https://packages.wazuh.com/4.9/wazuh-install.sh && sudo bash wazuh-install.sh -a
 ```
 
-The script immediately rejected the system, even though VM1 is genuinely 64-bit, just ARM64, not x86_64:
+The script rejected the system immediately, even though VM1 is genuinely 64-bit, just ARM64 rather than x86_64:
 
 ```
 ERROR: Uncompatible system. This script must be run on a 64-bit system.
@@ -128,7 +128,7 @@ sudo bash ./wazuh-install.sh -a
 
 ![Wazuh 4.14 Install Starts](ProjectImages/wazuh-414-install-starts.png)
 
-**Step 17:** Partway through, the installer failed at the **Wazuh dashboard** stage and automatically rolled back the entire installation. Investigating the install log revealed the real cause was a **disk-full error**: `df -h /` showed the root partition at only 14G total with 58% used, far less than the 30GB the VM was allocated. Ubuntu's guided LVM partitioning had under-allocated the volume group, leaving space unclaimed.
+**Step 17:** Partway through, the installer failed at the **dashboard** stage and automatically rolled back the entire installation. The install log pointed to a **disk-full error**: `df -h /` showed the root partition at only 14G total with 58% used, far less than the 30GB the VM was allocated. Ubuntu's guided LVM partitioning had left most of that space unclaimed.
 
 ![df -h Showing 58% Used](ProjectImages/df-h-showing-58-percent-used.png)
 
@@ -148,13 +148,13 @@ Password: ngPtuRAi?RIMgRaUEPZKHcaf9yT4XBF7
 
 ![Wazuh Install Success, Credentials](ProjectImages/wazuh-install-success-credentials.png)
 
-**Step 19:** Logging into the dashboard initially returned a `TimeoutException` retrieving internal user configuration from the indexer, an HTTP 500 error.
+**Step 19:** Logging into the dashboard returned a `TimeoutException` retrieving internal user configuration from the indexer, an HTTP 500 error.
 
 ![Dashboard Timeout Error, Indexer](ProjectImages/dashboard-timeout-error-indexer.png)
 
-Diagnosis traced this back to the disk filling up a second time. The indexer's own index and log growth had consumed the remaining space, and the earlier `lvextend` fix had only reclaimed space *within* the existing 30GB virtual disk, leaving nothing left to extend into.
+The root cause was the same problem a second time: the indexer's own index and log growth had consumed the space just reclaimed. That earlier fix had only freed space *within* the existing 30GB virtual disk, leaving nothing left to extend into.
 
-**Fix:** Resized the actual UTM virtual disk (30GB to 40GB) in VM Settings, then claimed the new space inside the guest OS with `growpart`, `pvresize`, `lvextend`, and `resize2fs`, and restarted all three Wazuh services in order (indexer, then manager, then dashboard).
+**Fix:** Resized the actual UTM virtual disk (30GB to 40GB) in VM Settings, then claimed the new space inside the guest OS with `growpart`, `pvresize`, `lvextend`, and `resize2fs`, and restarted all three Wazuh services in order: indexer, then manager, then dashboard.
 
 **Step 20:** With the disk properly sized, the dashboard loaded successfully with no further errors.
 
@@ -164,15 +164,15 @@ This closed out the Wazuh installation. VM1 was now running a stable indexer, ma
 
 ### 2.10 Architecture Note: VM1's Dual Role
 
-**Note:** Due to hardware constraints, VM1 serves as both the Wazuh manager and the monitored "victim" endpoint. This is possible because every Wazuh manager includes a built-in local agent (reserved ID `000`) that self-monitors the host it runs on; no separate agent installation is required. In a production deployment, the manager and monitored endpoints would typically run on separate systems, with agents deployed independently to each monitored host.
+**Note:** Due to hardware constraints, VM1 serves as both the Wazuh manager and the monitored "victim" endpoint. This is possible because every Wazuh manager includes a built-in local agent (reserved ID `000`) that self-monitors the host it runs on, so no separate agent installation is required. In a production deployment, the manager and monitored endpoints would typically run on separate systems, each with its own independently deployed agent.
 
-VM1 (`192.168.64.4`) therefore acts as both the infrastructure running Wazuh (manager, indexer, dashboard) *and* the simulated victim endpoint, the "compromised employee laptop" targeted by the SSH brute-force attack demonstrated in Section 4. See Section 3 for the `agent_control -l` output confirming agent 000's active status.
+VM1 (`192.168.64.4`) therefore acts as both the infrastructure running Wazuh (manager, indexer, dashboard) and the simulated victim endpoint: the "compromised employee laptop" targeted by the SSH brute-force attack demonstrated in Section 4. Section 3 includes the `agent_control -l` output confirming agent 000's active status.
 
 ---
 
 ### 2.11 Workflow Diagram
 
-The diagram below shows Wazuh's general operational pipeline: an agent collects raw log data, the manager decodes and evaluates it against the rule engine, matched events become alerts stored in the indexer, and an analyst reviews them through the dashboard. To make this concrete, the diagram is labeled with the actual rule IDs generated during our SSH brute-force scenario, showing how a single event can resolve to either a routine alert (Rule 5715, level 3) or, once correlated with our custom rule, a high-severity alert (Rule 100100, level 12). The full incident narrative behind these rule IDs is covered in Section 4.
+The diagram below shows Wazuh's general operational pipeline: an agent collects raw log data, the manager decodes and evaluates it against the rule engine, matched events become alerts stored in the indexer, and an analyst reviews them through the dashboard. It's labeled with the actual rule IDs generated during this project's SSH brute-force scenario, showing how a single event can resolve to either a routine alert (Rule 5715, level 3) or, once correlated with the custom rule, a high-severity alert (Rule 100100, level 12). The full incident narrative behind these rule IDs is covered in Section 4.
 
 ![Wazuh Workflow Diagram](ProjectImages/wazuh_workflow_horizontal.png)
 
@@ -184,35 +184,35 @@ The diagram below shows Wazuh's general operational pipeline: an agent collects 
 
 Wazuh is built around four architectural components that work together to move raw data into actionable intelligence.
 
-**Agents** are lightweight programs installed on monitored endpoints (servers, workstations, cloud instances) that collect log data, monitor file integrity, and report system state back to a central manager. Agents run with minimal system overhead and are each identified by a unique agent ID. Every Wazuh manager also includes a built-in local agent (reserved ID `000`) that self-monitors the host it runs on, without requiring separate installation.
+**Agents** are lightweight programs installed on monitored endpoints (servers, workstations, cloud instances) that collect log data, monitor file integrity, and report system state back to a central manager. They run with minimal overhead and are each identified by a unique agent ID. Every Wazuh manager also includes a built-in local agent (reserved ID `000`) that self-monitors the host it runs on, with no separate installation required.
 
-The **manager** is the analysis engine, and functions in two stages. A **decoder** first parses raw, unstructured log text into structured fields, for example, taking a single line of SSH log output and extracting the source IP, destination username, and port as separate, queryable fields. This matters because raw text alone can't be reliably filtered, aggregated, or correlated; structuring it is what makes detection possible in the first place. Once decoded, the **rule engine** evaluates those structured fields against Wazuh's ruleset: thousands of XML-defined rules, each carrying a severity level (0 to 15, with higher numbers indicating greater urgency), that determine whether and how loudly an event should generate an alert. Rules can match single events outright, or correlate patterns across multiple events over a defined time window, for instance, treating one failed login as routine but a sudden burst of them from the same source as evidence of an attack. This correlation capability is what separates a SIEM's rule engine from simple log storage: it lets the same underlying event data support both "did this happen" and "does this look like an attack pattern" simultaneously.
+The **manager** is the analysis engine and functions in two stages. A **decoder** first parses raw, unstructured log text into structured fields, for example, taking a single line of SSH log output and extracting the source IP, destination username, and port as separate, queryable fields. This matters because raw text alone can't be reliably filtered, aggregated, or correlated; structuring it is what makes detection possible in the first place. Once decoded, the **rule engine** evaluates those structured fields against Wazuh's ruleset: thousands of XML-defined rules, each carrying a severity level from 0 to 15. Rules can match a single event outright or correlate patterns across multiple events within a defined time window, treating one failed login as routine but a sudden burst of them from the same source as evidence of an attack. This correlation capability is what separates a SIEM's rule engine from simple log storage: the same underlying event data can support both "did this happen" and "does this look like an attack pattern."
 
-The **indexer**, built on OpenSearch, stores and indexes every alert the manager generates, making the full history of alerts and logs searchable at scale. This is the component that makes months of accumulated security data usable rather than just archived.
+The **indexer**, built on OpenSearch, stores and indexes every alert the manager generates, keeping months of accumulated security data searchable rather than just archived.
 
-The **dashboard** is a web-based interface that queries the indexer and displays results. It does not generate or store any data itself; it is purely a visualization and investigation layer for analysts, organized into a home page (shown below) and several purpose-built modules covering each of Wazuh's feature areas.
+The **dashboard** is a web-based interface that queries the indexer and displays results. It does not generate or store data itself; it's purely a visualization and investigation layer, organized into a home page (shown below) and several purpose-built modules covering each of Wazuh's feature areas.
 
 ![Wazuh Dashboard Overview](ProjectImages/wazuh-dashboard-overview-success.png)
 
 ### 3.2 Endpoint Security
 
-This category covers detection and hardening at the individual host level, focused on the state of a system rather than network traffic passing through it. **Configuration Assessment** scans a system's settings against known security baselines (such as CIS benchmarks) to flag misconfigurations that could weaken its security posture even in the absence of an active attack. **Malware Detection** checks for indicators of compromise associated with known malware signatures or cyberattack patterns, correlating local system state against threat intelligence feeds. **File Integrity Monitoring (FIM)** tracks changes to files and directories, including permissions, ownership, content, and timestamps, and alerts when unauthorized or unexpected modifications occur. FIM is particularly valuable for detecting persistence mechanisms or tampering that happens *after* an initial compromise, since an attacker who has already gained access will often modify configuration files, add backdoors, or alter system binaries as a next step.
+This category covers detection and hardening at the individual host level, focused on the state of a system rather than the traffic passing through it. **Configuration Assessment** scans a system's settings against known security baselines (such as CIS benchmarks) to flag misconfigurations even in the absence of an active attack. **Malware Detection** checks for indicators of compromise tied to known malware signatures or attack patterns. **File Integrity Monitoring (FIM)** tracks changes to files and directories, including permissions, ownership, content, and timestamps, and alerts on unauthorized or unexpected modifications. FIM is particularly valuable for detecting persistence mechanisms or tampering that happens *after* an initial compromise, since an attacker who has already gained access will typically modify configuration files, add backdoors, or alter system binaries as a next step.
 
 ### 3.3 Threat Intelligence
 
-This category focuses on understanding attacker behavior across collected data, rather than flagging individual events in isolation. **Threat Hunting** provides a searchable, aggregated view of security alerts, letting an analyst browse alert volume, top triggered rules, and affected hosts over a given time window, rather than reviewing raw logs line by line. This shifts investigation from reactive ("what does this one alert mean") to proactive ("what patterns exist across all my alerts right now"). **Vulnerability Detection** cross-references installed software versions against known vulnerability databases (such as CVE feeds) to flag applications with unpatched, publicly known weaknesses, useful for identifying exposure *before* it's exploited, rather than only detecting exploitation after the fact. The **MITRE ATT&CK** module maps detected alerts directly to specific adversary tactics and techniques from the MITRE ATT&CK framework, a widely used industry-standard taxonomy of attacker behavior maintained by MITRE Corporation. This mapping happens automatically for rules that correlate to known techniques, meaning an alert isn't just "something bad happened" but is tied to a specific, named point in an attacker's likely playbook (for example, "Brute Force" under the "Credential Access" tactic), giving analysts a standardized reference point instead of relying solely on their own interpretation of severity or intent.
+This category focuses on understanding attacker behavior across collected data rather than flagging individual events in isolation. **Threat Hunting** provides a searchable, aggregated view of security alerts, letting an analyst browse alert volume, top triggered rules, and affected hosts over a given time window instead of reviewing raw logs line by line. This shifts investigation from reactive ("what does this one alert mean") to proactive ("what patterns exist across all my alerts right now"). **Vulnerability Detection** cross-references installed software versions against known vulnerability databases to flag applications with unpatched weaknesses, useful for identifying exposure before it's exploited rather than only after. The **MITRE ATT&CK** module maps detected alerts directly to specific adversary tactics and techniques from the MITRE ATT&CK framework, automatically for rules that correlate to known techniques. That means an alert isn't just "something bad happened," but is tied to a named point in an attacker's likely playbook, such as "Brute Force" under the "Credential Access" tactic, giving analysts a standardized reference point rather than relying solely on their own interpretation of severity or intent.
 
 ### 3.4 Security Operations
 
-This category centers on compliance and organizational hygiene rather than direct threat detection. **IT Hygiene** assesses systems, software, and network configuration at scale for misconfigurations and anomalies, functioning as a broader housekeeping check across an environment. The remaining tools, **PCI DSS**, **GDPR**, **HIPAA**, **NIST 800-53**, and **TSC**, each automatically map triggered alerts to the specific controls or clauses of their respective regulatory or industry framework. This is a meaningful time-saver in real organizational use: rather than an analyst or compliance officer manually cross-referencing every alert against, say, PCI DSS requirement 10.2.4, Wazuh attaches that mapping to the alert itself at the moment it's generated, as part of the rule's own metadata.
+This category centers on compliance and organizational hygiene rather than direct threat detection. **IT Hygiene** assesses systems, software, and network configuration at scale for misconfigurations and anomalies. The remaining tools, **PCI DSS**, **GDPR**, **HIPAA**, **NIST 800-53**, and **TSC**, each automatically map triggered alerts to the specific controls of their respective regulatory or industry framework. This is a meaningful time-saver in real organizational use: rather than an analyst manually cross-referencing every alert against, say, PCI DSS requirement 10.2.4, Wazuh attaches that mapping to the alert itself at the moment it's generated.
 
 ### 3.5 Cloud Security
 
-This category extends Wazuh's monitoring beyond on-premises endpoints into cloud and SaaS environments, reflecting the reality that most modern organizations run infrastructure and services outside a traditional network perimeter. Dedicated integrations exist for **Docker** (monitoring container lifecycle events such as creation, starting, and stopping), **Amazon Web Services** and **Google Cloud Platform** (security events pulled directly via each provider's respective API), **GitHub** (audit log monitoring for organizational activity), and **Office 365** / **Microsoft Graph API** (Microsoft 365 service security events). These integrations funnel cloud-native security events through the same manager/indexer/dashboard pipeline used for on-premises endpoints, meaning an organization doesn't need a separate tool or dashboard to correlate on-prem and cloud activity together.
+This category extends Wazuh's monitoring beyond on-premises endpoints into cloud and SaaS environments, reflecting the reality that most modern organizations run infrastructure outside a traditional network perimeter. Dedicated integrations exist for **Docker** (monitoring container lifecycle events), **Amazon Web Services** and **Google Cloud Platform** (security events pulled directly via each provider's API), **GitHub** (audit log monitoring), and **Office 365** / **Microsoft Graph API** (Microsoft 365 service security events). These integrations funnel cloud-native security events through the same manager/indexer/dashboard pipeline used for on-premises endpoints, so an organization doesn't need a separate tool to correlate on-prem and cloud activity.
 
 ### 3.6 `wazuh-logtest`: Offline Rule Validation
 
-Wazuh includes a command-line utility, `wazuh-logtest`, that allows an analyst to test how a given log line would be decoded and which rules it would match, entirely offline, without needing to generate a live event or query the indexer/dashboard. Each submitted log line runs through the full decode-then-match pipeline, and the tool reports exactly which rule ID and severity level fired, along with any associated MITRE ATT&CK mapping and firing count if the rule is frequency-based. This makes it a genuinely practical tool in two distinct scenarios: troubleshooting why an *existing* rule isn't firing as expected on production data, and validating a *newly written* custom rule's logic before deploying it against live traffic, where a mistake could mean either missed detections or a flood of false positives.
+Wazuh includes a command-line utility, `wazuh-logtest`, that allows an analyst to test how a given log line would be decoded and which rules it would match, entirely offline, without generating a live event or querying the dashboard. Each submitted log line runs through the full decode-then-match pipeline, and the tool reports exactly which rule ID and severity level fired, along with any MITRE ATT&CK mapping and firing count if the rule is frequency-based. This makes it genuinely practical in two scenarios: troubleshooting why an existing rule isn't firing as expected on production data, and validating a newly written custom rule's logic before deploying it against live traffic, where a mistake could mean missed detections or a flood of false positives.
 
 ```bash
 sudo /var/ossec/bin/wazuh-logtest
@@ -224,17 +224,17 @@ sudo /var/ossec/bin/wazuh-logtest
 
 ### 4.1 Scenario
 
-This project simulates a common insider-risk scenario: a disgruntled employee's company laptop, VM1 in this environment, is left with weak SSH credentials, no account lockout policy, and password authentication enabled. An attacker (Kali Linux, VM2, `192.168.64.3`) discovers the exposed SSH service and runs a brute-force attack against it using Hydra. The victim endpoint (VM1, `192.168.64.4`), running the Wazuh manager with its built-in local agent (`000`, see Section 2.10), detects and logs the attack in real time.
+This project simulates a common insider-risk scenario: a disgruntled employee's company laptop, VM1 in this environment, is left with weak SSH credentials, no account lockout policy, and password authentication enabled. An attacker (Kali Linux, VM2, `192.168.64.3`) discovers the exposed SSH service and runs a brute-force attack against it using Hydra. VM1 (`192.168.64.4`), running the Wazuh manager with its built-in local agent (`000`, see Section 2.10), detects and logs the attack in real time.
 
-The `agent_control -l` output below confirms agent `000` (`wazuh-manager`, server role) was active and reporting locally at the time of the attack, exactly the dual-role setup described in Section 2.10.
+The `agent_control -l` output below confirms agent `000` (`wazuh-manager`, server role) was active and reporting locally at the time of the attack, consistent with the dual-role setup described in Section 2.10.
 
 ![agent_control Confirms Agent 000 Active](ProjectImages/agent-control-confirms-agent-000.png)
 
-The goal of this exercise was twofold: first, confirm that Wazuh's out-of-the-box rules detect the brute-force attempts and the eventual successful login as two separate events; second, identify and close the gap between those two default alerts with a custom correlation rule, since a successful login immediately following a string of failures is a materially more urgent event than either one alone.
+The goal of this exercise was twofold: confirm that Wazuh's out-of-the-box rules detect the brute-force attempts and the eventual successful login as two separate events, then identify and close the gap between those two default alerts with a custom correlation rule, since a successful login immediately following a string of failures is a materially more urgent event than either one alone.
 
 ### 4.2 Executing the Attack
 
-From Kali, Hydra was run against VM1's SSH service using a short custom wordlist of common weak passwords, simulating an attacker guessing repeatedly against a real, exposed SSH login:
+From Kali, Hydra was run against VM1's SSH service using a short custom wordlist of common weak passwords:
 
 ```bash
 hydra -l dmatute -P wordlist.txt -t 4 ssh://192.168.64.4
@@ -246,27 +246,27 @@ hydra -l dmatute -P wordlist.txt -t 4 ssh://192.168.64.4
 
 ### 4.3 Default Wazuh Detection: The Severity Gap
 
-Each Hydra attempt generated a corresponding `sshd` authentication log entry on VM1 (visible directly in `/var/log/auth.log`), which the local agent (`000`) forwarded to the manager for decoding and rule evaluation.
+Each Hydra attempt generated a corresponding `sshd` authentication log entry on VM1, visible directly in `/var/log/auth.log`, which the local agent (`000`) forwarded to the manager for decoding and rule evaluation.
 
 ![auth.log Showing Failed and Accepted SSH Attempts](ProjectImages/auth-log-tail-failed-and-accepted.png)
 
 Three default Wazuh rules fired over the course of the attack, visible together in the Threat Hunting **Events** view:
 
 - **Rule `5760`** (level 5) fired on each individual failed SSH password attempt, the baseline "authentication failed" rule.
-- **Rule `5763`** (level 10) fired once eight failed attempts from the same source IP (`192.168.64.3`) crossed Wazuh's built-in frequency threshold, escalating from isolated failures to a recognized brute-force pattern: *"sshd: brute force trying to get access to the system. Authentication failed."*
-- **Rule `5715`** (level 3) fired on the final, successful SSH login, *"sshd: authentication success"*, the same rule that would fire for any ordinary, legitimate login.
+- **Rule `5763`** (level 10) fired once eight failed attempts from the same source IP (`192.168.64.3`) crossed Wazuh's built-in frequency threshold: *"sshd: brute force trying to get access to the system. Authentication failed."*
+- **Rule `5715`** (level 3) fired on the final, successful SSH login, *"sshd: authentication success,"* the same rule that would fire for any ordinary, legitimate login.
 
 ![Threat Hunting Events Showing Rules 5763 and 5715](ProjectImages/threat-hunting-events-5763-5715.png)
 
-Expanding rule `5763`'s full alert record confirms the mechanics behind the escalation: `rule.frequency` shows `8`, meaning eight failed attempts within the detection window were required to trigger it, and `previous_output` lists the individual failed-login log lines that were rolled up into the single brute-force alert. The alert is also pre-mapped to **T1110 (Brute Force)** under the Credential Access tactic, and to GDPR, HIPAA, PCI DSS, NIST 800-53, and TSC compliance controls, all automatically, as part of the rule's own metadata (see Section 3.4).
+Expanding rule `5763`'s full alert record confirms the mechanics behind the escalation: `rule.frequency` shows `8`, meaning eight failed attempts within the detection window were required to trigger it, and `previous_output` lists the individual failed-login log lines rolled up into the single brute-force alert. The alert is also pre-mapped to **T1110 (Brute Force)** under the Credential Access tactic, and to GDPR, HIPAA, PCI DSS, NIST 800-53, and TSC compliance controls, all automatically, as part of the rule's own metadata (see Section 3.4).
 
 ![Rule 5763 Full Alert Detail](ProjectImages/rule-5763-alert-detail.png)
 
-Expanding the successful-login alert shows rule `5715` firing at level 3, the same severity level as any routine login, despite following immediately after the level-10 brute-force alert above. It carries its own MITRE mapping (**T1078 – Valid Accounts**, **T1021 – Remote Services**) reflecting that a login *did* succeed, but nothing in this record alone indicates the login was connected to an attack.
+The successful-login alert, rule `5715`, fires at level 3, the same severity as any routine login, despite following immediately after the level-10 brute-force alert above. It carries its own MITRE mapping (**T1078 – Valid Accounts**, **T1021 – Remote Services**) reflecting that a login did succeed, but nothing in this record alone indicates the login was connected to an attack.
 
 ![Rule 5715 Full Alert Detail](ProjectImages/rule-5715-alert-detail.png)
 
-This is where the default ruleset's real limitation shows up: rule `5715` treats a successful login exactly the same whether it's a routine morning sign-in or the tail end of a brute-force attack that fired `5763` seconds earlier. Nothing in the default ruleset connects the two events. An analyst scanning a dashboard full of alerts could see the level-10 brute-force alert, see a separate level-3 login-success alert a moment later, and have no built-in signal tying them together as a single, likely-successful compromise. This severity gap, a genuine security-relevant successful login sitting at the same low severity as any other login, was the specific problem the custom rule in Section 4.4 was written to solve.
+This is where the default ruleset's real limitation shows up: rule `5715` treats a successful login exactly the same whether it's a routine morning sign-in or the tail end of a brute-force attack that fired `5763` seconds earlier. Nothing in the default ruleset connects the two events. An analyst scanning a dashboard could see the level-10 brute-force alert, then a separate level-3 login-success alert a moment later, with no built-in signal tying them together as a single, likely-successful compromise. This severity gap, a genuinely security-relevant login sitting at the same low severity as any other, is the specific problem the custom rule in Section 4.4 was written to solve.
 
 For a baseline reference point, the Threat Hunting dashboard *before* the attack traffic is included below, showing routine activity only: 7 total events, 3 authentication failures, 2 authentication successes, and zero level-12-or-above alerts.
 
@@ -274,7 +274,7 @@ For a baseline reference point, the Threat Hunting dashboard *before* the attack
 
 ### 4.4 Building the Correlation Rule
 
-To close this gap, a custom Wazuh correlation rule was written in `/var/ossec/etc/rules/local_rules.xml` on VM1. The goal was straightforward: if a successful login (`5715`) is immediately preceded by a brute-force alert (`5763`) from the same source IP, treat that as a high-severity event, since it strongly suggests the login succeeded *because* of the preceding brute-force attempt, not in spite of it.
+To close this gap, a custom Wazuh correlation rule was written in `/var/ossec/etc/rules/local_rules.xml` on VM1. The goal was straightforward: if a successful login (`5715`) is immediately preceded by a brute-force alert (`5763`) from the same source IP, treat that as a high-severity event, since it strongly suggests the login succeeded because of the preceding brute-force attempt, not in spite of it.
 
 The first version of the rule used the wrong tag to reference the brute-force alert:
 
@@ -282,7 +282,7 @@ The first version of the rule used the wrong tag to reference the brute-force al
 <id>^5715$</id>
 ```
 
-This produced no match during testing. The bug was a conceptual mix-up rather than a typo: `<id>` matches a numeric value *extracted from within a log's fields*, not the ID of a rule that has already fired. Since rule `5763`'s ID isn't a field inside the log text itself, it can never be matched this way. What was actually needed was `<if_sid>`, which tells the rule engine "only evaluate this rule if the rule with this ID already matched this event," and `<if_matched_sid>`, which checks whether a *different, prior* rule fired recently for the same agent. Correcting the tags produced the working rule:
+This produced no match during testing. The bug was a conceptual mix-up rather than a typo: `<id>` matches a numeric value extracted from within a log's fields, not the ID of a rule that has already fired. Since rule `5763`'s ID isn't a field inside the log text itself, it can never be matched this way. What was actually needed was `<if_sid>`, which tells the rule engine to only evaluate this rule if the rule with this ID already matched the event, and `<if_matched_sid>`, which checks whether a different, prior rule fired recently for the same agent. Correcting the tags produced the working rule:
 
 ```xml
 <rule id="100100" level="12">
@@ -298,7 +298,7 @@ This produced no match during testing. The bug was a conceptual mix-up rather th
 </rule>
 ```
 
-In plain terms: rule `100100` only evaluates on events that already matched rule `5715` (a successful login), and only fires if rule `5763` (brute-force detected) had *also* matched recently for the same source IP. The `<same_source_ip />` tag ensures the correlation only applies when both the failed attempts and the successful login came from the identical attacking IP, not just any brute-force alert and any login happening to occur near each other in time. When both conditions hold, the rule fires at level 12, a significant jump from `5715`'s level 3, and attaches two MITRE ATT&CK techniques: **T1110** (Brute Force) for the attack method, and **T1078** (Valid Accounts) for the fact that the attacker is now operating with a legitimate account's credentials, which is arguably the more dangerous half of the story, since a valid-account login is far harder to distinguish from normal user activity going forward.
+In plain terms, rule `100100` only evaluates on events that already matched rule `5715` (a successful login), and only fires if rule `5763` (brute-force detected) had also matched recently for the same source IP. The `<same_source_ip />` tag ensures the correlation only applies when both the failed attempts and the successful login came from the identical attacking IP, not just any brute-force alert and any login happening to occur near each other in time. When both conditions hold, the rule fires at level 12, a significant jump from `5715`'s level 3, and attaches two MITRE ATT&CK techniques: **T1110** (Brute Force) for the attack method, and **T1078** (Valid Accounts) for the fact that the attacker is now operating with a legitimate account's credentials. That second technique is arguably the more dangerous half of the story, since a valid-account login is far harder to distinguish from normal user activity going forward.
 
 ### 4.5 Validating the Rule with `wazuh-logtest`
 
@@ -323,13 +323,13 @@ The real `full_log` lines captured from the actual Hydra attack were fed into `w
 
 ![wazuh-logtest Output Rule 100100 Firing](ProjectImages/wazuh-logtest-rule-100100-firing.png)
 
-The output confirms all of the rule's design goals in one pass: the correct rule ID and elevated level fired (`100100`, level 12, versus `5715`'s level 3), the description correctly rendered the attacking source IP into the message, `**Alert to be generated` confirms it would actually produce a dashboard alert (not just a silent rule match), and both intended MITRE ATT&CK techniques (T1110, T1078) were attached automatically, expanding out to five MITRE tactics in total.
+The output confirms every design goal in one pass: the correct rule ID and elevated level fired (`100100`, level 12, versus `5715`'s level 3), the description correctly rendered the attacking source IP into the message, `**Alert to be generated` confirms it would actually produce a dashboard alert rather than a silent rule match, and both intended MITRE ATT&CK techniques (T1110, T1078) were attached automatically, expanding out to five MITRE tactics in total.
 
-This same behavior is confirmed a second time by the live alert itself once the rule was deployed and the attack re-triggered it for real. Rule `100100` appears directly in the Threat Hunting **Events** list alongside the routine `5760`/`5715` traffic around it, exactly where an analyst would encounter it in practice:
+This same behavior was confirmed a second time by the live alert itself once the rule was deployed and the attack re-triggered it for real. Rule `100100` appears directly in the Threat Hunting **Events** list alongside the routine `5760`/`5715` traffic around it, exactly where an analyst would encounter it in practice.
 
 ![Rule 100100 Appearing in the Events List](ProjectImages/rule-100100-in-events-list.png)
 
-And the full alert record confirms every field matches what `wazuh-logtest` predicted, now with the actual timestamp, agent, and source IP attached: `rule.id` `100100`, `rule.level` `12`, `rule.groups` including `brute_force_success`, and `rule.mitre.id` `T1110, T1078`.
+The full alert record confirms every field matches what `wazuh-logtest` predicted, now with the actual timestamp, agent, and source IP attached: `rule.id` `100100`, `rule.level` `12`, `rule.groups` including `brute_force_success`, and `rule.mitre.id` `T1110, T1078`.
 
 ![Rule 100100 Full Alert Detail](ProjectImages/rule-100100-alert-detail.png)
 
@@ -339,22 +339,22 @@ Comparing the Threat Hunting dashboard before (Section 4.3) and after the attack
 
 ![Threat Hunting Dashboard After the Attack](ProjectImages/threat-hunting-dashboard-after.png)
 
-The **Top 10 MITRE ATT&CKS** panel breaks this down by technique: **Password Guessing** (16 occurrences) and **SSH** (11) dominate, reflecting the volume of individual failed Hydra attempts, while **Valid Accounts** (4), **Brute Force** (3), and **Remote Services** (2) mark the smaller number of alerts, including rule `100100`, tied to the attack actually succeeding.
+The **Top 10 MITRE ATT&CKS** panel breaks this down by technique: **Password Guessing** (16 occurrences) and **SSH** (11) dominate, reflecting the volume of individual failed Hydra attempts, while **Valid Accounts** (4), **Brute Force** (3), and **Remote Services** (2) mark the smaller number of alerts tied to the attack actually succeeding, including rule `100100`.
 
 ![Top 10 MITRE ATT&CK Techniques Table](ProjectImages/top-10-mitre-attacks-table.png)
 
-Live re-running of the Hydra attack against the dashboard end-to-end was also captured directly (rather than relying on `wazuh-logtest` alone): the events list, the individual `5763` and `5715` alert records, and the `100100` alert record above are all pulled from that live run, so this project has both offline rule-logic validation *and* live-traffic proof that the full pipeline, from Hydra's first failed attempt through the custom rule firing, works end to end.
+The live re-run of the Hydra attack was also captured directly, rather than relying on `wazuh-logtest` alone: the events list, the individual `5763` and `5715` alert records, and the `100100` alert record above are all pulled from that live run. This project therefore has both offline rule-logic validation and live-traffic proof that the full pipeline, from Hydra's first failed attempt through the custom rule firing, works end to end.
 
 ### 4.7 Summary: MITRE ATT&CK Mapping
 
 | Rule ID | Level | Trigger | MITRE Technique(s) |
 |---|---|---|---|
 | `5760` | 5 | Single failed SSH login attempt | — |
-| `5763` | 10 | 8 failed attempts from same source IP cross frequency threshold | T1110 – Brute Force |
-| `5715` | 3 | Any successful SSH login (default, no context) | T1078 – Valid Accounts, T1021 – Remote Services |
-| `100100` (custom) | 12 | Successful login (`5715`) immediately preceded by brute force (`5763`) from same source IP | T1110 – Brute Force, T1078 – Valid Accounts |
+| `5763` | 10 | 8 failed attempts from same source IP cross frequency threshold | T1110, Brute Force |
+| `5715` | 3 | Any successful SSH login (default, no context) | T1078, Valid Accounts; T1021, Remote Services |
+| `100100` (custom) | 12 | Successful login (`5715`) immediately preceded by brute force (`5763`) from same source IP | T1110, Brute Force; T1078, Valid Accounts |
 
-The end-to-end result is a detection chain that mirrors how a real analyst would reason about this incident: individual failures are noise, a burst of failures is a brute-force attempt worth flagging, and a login that succeeds right after that burst isn't just "a login," it's a likely account compromise that deserves a level-12 alert and an explicit MITRE ATT&CK trail, rather than getting lost at the same severity as a routine sign-in.
+The end-to-end result is a detection chain that mirrors how a real analyst would reason about this incident: individual failures are noise, a burst of failures is a brute-force attempt worth flagging, and a login that succeeds right after that burst isn't just "a login." It's a likely account compromise that deserves a level-12 alert and an explicit MITRE ATT&CK trail, rather than getting lost at the same severity as a routine sign-in.
 
 ---
 
@@ -362,9 +362,9 @@ The end-to-end result is a detection chain that mirrors how a real analyst would
 
 ### 5.1 Strengths
 
-**Real-time, correlated detection.** Wazuh evaluates events against its rule engine as they arrive rather than simply archiving them, and it can string multiple events together over time into a single, higher-confidence alert. This project saw that firsthand: eight separate failed-login events were automatically consolidated into one brute-force alert (rule `5763`) using nothing beyond the default ruleset.
+**Real-time, correlated detection.** Wazuh evaluates events against its rule engine as they arrive rather than simply archiving them, and it can string multiple events together over time into a single, higher-confidence alert. This project demonstrated that directly: eight separate failed-login events were automatically consolidated into one brute-force alert (rule `5763`) using nothing beyond the default ruleset.
 
-**Room to extend past the default ruleset.** The out-of-the-box rules are a solid starting point, but they're a floor, not a ceiling. The custom rule built in Section 4.4 (`100100`) showed that Wazuh's correlation tags (`if_sid`, `if_matched_sid`, `same_source_ip`) are flexible enough to patch a concrete gap in the defaults, namely, a successful login getting the same severity as any routine sign-in even when it directly followed a brute-force attempt.
+**Room to extend past the default ruleset.** The out-of-the-box rules are a solid starting point, but they're a floor, not a ceiling. The custom rule built in Section 4.4 (`100100`) showed that Wazuh's correlation tags (`if_sid`, `if_matched_sid`, `same_source_ip`) are flexible enough to patch a concrete gap in the defaults: a successful login getting the same severity as any routine sign-in even when it directly followed a brute-force attempt.
 
 **MITRE ATT&CK context comes standard.** Every rule that fired during this project, whether default or custom, arrived already tagged with MITRE technique and tactic labels. That's useful on two fronts: it speeds up an individual analyst's triage, and it gives the finding a shared vocabulary for explaining it to a wider security team that may not know Wazuh's rule IDs but will recognize MITRE ATT&CK terminology.
 
@@ -374,20 +374,20 @@ The end-to-end result is a detection chain that mirrors how a real analyst would
 
 ### 5.2 Limitations & Scope Tradeoffs
 
-**Single-host, dual-role architecture.** Due to the 8GB RAM constraint on the host machine, VM1 served as both the Wazuh manager and the monitored "victim" endpoint (Section 2.10), rather than deploying the manager and a separately-installed agent on two distinct systems as a production environment would. This is a legitimate hardware-driven scope decision, but it does mean this project doesn't demonstrate a truly independent agent deployment, agent-to-manager network configuration, or what monitoring multiple distinct endpoints from one manager looks like.
+**Single-host, dual-role architecture.** Due to the 8GB RAM constraint on the host machine, VM1 served as both the Wazuh manager and the monitored "victim" endpoint (Section 2.10), rather than deploying the manager and a separately-installed agent on two distinct systems as a production environment would. This is a reasonable hardware-driven scope decision, but it does mean this project doesn't demonstrate a truly independent agent deployment, agent-to-manager network configuration, or what monitoring multiple distinct endpoints from one manager looks like.
 
-**No active-response demo.** Wazuh supports automated active response (for example, automatically blocking an attacking IP via firewall rule once a brute-force alert fires), which would have been a natural next step after rule `100100`. This was deliberately scoped out to keep the project focused on the detection and correlation side of the pipeline rather than the response side, given the time available.
+**No active-response demo.** Wazuh supports automated active response, for example, automatically blocking an attacking IP via firewall rule once a brute-force alert fires, which would have been a natural next step after rule `100100`. This was deliberately scoped out to keep the project focused on the detection and correlation side of the pipeline rather than the response side, given the time available.
 
-**No File Integrity Monitoring demo.** Section 3.2 covers FIM as a core Wazuh feature, particularly relevant to detecting *post*-compromise activity like backdoors or tampered binaries, but this project's scenario stopped at the point of successful login and didn't simulate any follow-on attacker activity on the compromised account that FIM would have caught.
+**No File Integrity Monitoring demo.** Section 3.2 covers FIM as a core Wazuh feature, particularly relevant to detecting post-compromise activity like backdoors or tampered binaries, but this project's scenario stopped at the point of successful login and didn't simulate any follow-on attacker activity on the compromised account that FIM would have caught.
 
 **Default rule severity gap (the project's central finding).** The most significant limitation uncovered wasn't a limitation of the lab setup, but of Wazuh's out-of-the-box ruleset itself: a successful SSH login is treated identically (rule `5715`, level 3) whether it's a legitimate morning sign-in or the direct result of a brute-force attack that just triggered a level-10 alert seconds earlier (Section 4.3). Nothing in the default rules connects the two. This is exactly the kind of blind spot a real SOC analyst would need to catch manually, or, as this project did, close with a custom correlation rule.
 
 **Environment-specific installation friction.** Several issues encountered during setup were specific to this project's environment (Apple Silicon, ARM64, UTM) rather than general Wazuh limitations, but they're worth summarizing as lessons learned since they consumed real setup time:
 - Wazuh's default install script rejects ARM64 outright, requiring the version-specific 4.14 branch installer instead (Section 2.9).
-- Ubuntu's guided LVM partitioning under-allocated disk space twice in a row, once within the existing virtual disk, and again after the virtual disk itself was resized, each time causing the dashboard installation or login to fail with a misleading error rather than a clear "disk full" message.
+- Ubuntu's guided LVM partitioning under-allocated disk space twice in a row, once within the existing virtual disk and again after the virtual disk itself was resized, each time causing the dashboard installation or login to fail with a misleading error rather than a clear "disk full" message.
 - A GRUB reboot loop occurred after the initial Ubuntu install simply because the installation ISO wasn't ejected before the first reboot.
 
-None of these are flaws in Wazuh as a tool.
+None of these are flaws in Wazuh itself, just the tradeoff of running it on Apple Silicon, a platform it wasn't originally built for. Free and open-source doesn't mean frictionless, and platform compatibility is worth checking before committing time to an install.
 
 ---
 
