@@ -222,7 +222,141 @@ sudo /var/ossec/bin/wazuh-logtest
 
 ## 4. Practical Application
 
-*(TBD, incident narrative: disgruntled employee laptop compromised via weak SSH creds. Hydra brute-force attack steps and output. Wazuh alerts firing, rule IDs. Custom rule and wazuh-logtest validation. MITRE ATT&CK T1110 mapping.)*
+### 4.1 Scenario
+
+This project simulates a common insider-risk scenario: a disgruntled employee's company laptop, VM1 in this environment, is left with weak SSH credentials, no account lockout policy, and password authentication enabled. An attacker (Kali Linux, VM2, `192.168.64.3`) discovers the exposed SSH service and runs a brute-force attack against it using Hydra. The victim endpoint (VM1, `192.168.64.4`), running the Wazuh manager with its built-in local agent (`000`, see Section 2.10), detects and logs the attack in real time.
+
+The `agent_control -l` output below confirms agent `000` (`wazuh-manager`, server role) was active and reporting locally at the time of the attack, exactly the dual-role setup described in Section 2.10.
+
+![agent_control Confirms Agent 000 Active](ProjectImages/agent-control-confirms-agent-000.png)
+
+The goal of this exercise was twofold: first, confirm that Wazuh's out-of-the-box rules detect the brute-force attempts and the eventual successful login as two separate events; second, identify and close the gap between those two default alerts with a custom correlation rule, since a successful login immediately following a string of failures is a materially more urgent event than either one alone.
+
+### 4.2 Executing the Attack
+
+From Kali, Hydra was run against VM1's SSH service using a short custom wordlist of common weak passwords, simulating an attacker guessing repeatedly against a real, exposed SSH login:
+
+```bash
+hydra -l dmatute -P wordlist.txt -t 4 ssh://192.168.64.4
+```
+
+`wordlist.txt` contained eleven common weak passwords (`123456`, `password`, `letmein`, `qwerty`, `welcome1`, `changeme`, `admin123`, `default`, `P@ssw0rd`, `guest`, `admin`). Hydra worked through the list with four concurrent tasks and found a valid match: username `dmatute`, password `admin`, completing at `2026-08-08 12:50:41`.
+
+![Hydra Brute Force Attack Output](ProjectImages/hydra-attack-successful.png)
+
+### 4.3 Default Wazuh Detection: The Severity Gap
+
+Each Hydra attempt generated a corresponding `sshd` authentication log entry on VM1 (visible directly in `/var/log/auth.log`), which the local agent (`000`) forwarded to the manager for decoding and rule evaluation.
+
+![auth.log Showing Failed and Accepted SSH Attempts](ProjectImages/auth-log-tail-failed-and-accepted.png)
+
+Three default Wazuh rules fired over the course of the attack, visible together in the Threat Hunting **Events** view:
+
+- **Rule `5760`** (level 5) fired on each individual failed SSH password attempt, the baseline "authentication failed" rule.
+- **Rule `5763`** (level 10) fired once eight failed attempts from the same source IP (`192.168.64.3`) crossed Wazuh's built-in frequency threshold, escalating from isolated failures to a recognized brute-force pattern: *"sshd: brute force trying to get access to the system. Authentication failed."*
+- **Rule `5715`** (level 3) fired on the final, successful SSH login, *"sshd: authentication success"*, the same rule that would fire for any ordinary, legitimate login.
+
+![Threat Hunting Events Showing Rules 5763 and 5715](ProjectImages/threat-hunting-events-5763-5715.png)
+
+Expanding rule `5763`'s full alert record confirms the mechanics behind the escalation: `rule.frequency` shows `8`, meaning eight failed attempts within the detection window were required to trigger it, and `previous_output` lists the individual failed-login log lines that were rolled up into the single brute-force alert. The alert is also pre-mapped to **T1110 (Brute Force)** under the Credential Access tactic, and to GDPR, HIPAA, PCI DSS, NIST 800-53, and TSC compliance controls, all automatically, as part of the rule's own metadata (see Section 3.4).
+
+![Rule 5763 Full Alert Detail](ProjectImages/rule-5763-alert-detail.png)
+
+Expanding the successful-login alert shows rule `5715` firing at level 3, the same severity level as any routine login, despite following immediately after the level-10 brute-force alert above. It carries its own MITRE mapping (**T1078 – Valid Accounts**, **T1021 – Remote Services**) reflecting that a login *did* succeed, but nothing in this record alone indicates the login was connected to an attack.
+
+![Rule 5715 Full Alert Detail](ProjectImages/rule-5715-alert-detail.png)
+
+This is where the default ruleset's real limitation shows up: rule `5715` treats a successful login exactly the same whether it's a routine morning sign-in or the tail end of a brute-force attack that fired `5763` seconds earlier. Nothing in the default ruleset connects the two events. An analyst scanning a dashboard full of alerts could see the level-10 brute-force alert, see a separate level-3 login-success alert a moment later, and have no built-in signal tying them together as a single, likely-successful compromise. This severity gap, a genuine security-relevant successful login sitting at the same low severity as any other login, was the specific problem the custom rule in Section 4.4 was written to solve.
+
+For a baseline reference point, the Threat Hunting dashboard *before* the attack traffic is included below, showing routine activity only: 7 total events, 3 authentication failures, 2 authentication successes, and zero level-12-or-above alerts.
+
+![Threat Hunting Dashboard Before the Attack](ProjectImages/threat-hunting-dashboard-before.png)
+
+### 4.4 Building the Correlation Rule
+
+To close this gap, a custom Wazuh correlation rule was written in `/var/ossec/etc/rules/local_rules.xml` on VM1. The goal was straightforward: if a successful login (`5715`) is immediately preceded by a brute-force alert (`5763`) from the same source IP, treat that as a high-severity event, since it strongly suggests the login succeeded *because* of the preceding brute-force attempt, not in spite of it.
+
+The first version of the rule used the wrong tag to reference the brute-force alert:
+
+```xml
+<id>^5715$</id>
+```
+
+This produced no match during testing. The bug was a conceptual mix-up rather than a typo: `<id>` matches a numeric value *extracted from within a log's fields*, not the ID of a rule that has already fired. Since rule `5763`'s ID isn't a field inside the log text itself, it can never be matched this way. What was actually needed was `<if_sid>`, which tells the rule engine "only evaluate this rule if the rule with this ID already matched this event," and `<if_matched_sid>`, which checks whether a *different, prior* rule fired recently for the same agent. Correcting the tags produced the working rule:
+
+```xml
+<rule id="100100" level="12">
+  <if_matched_sid>5763</if_matched_sid>
+  <if_sid>5715</if_sid>
+  <same_source_ip />
+  <description>Successful SSH login from $(srcip) following brute force attempts - possible account compromise</description>
+  <mitre>
+    <id>T1110</id>
+    <id>T1078</id>
+  </mitre>
+  <group>authentication_success,brute_force_success,</group>
+</rule>
+```
+
+In plain terms: rule `100100` only evaluates on events that already matched rule `5715` (a successful login), and only fires if rule `5763` (brute-force detected) had *also* matched recently for the same source IP. The `<same_source_ip />` tag ensures the correlation only applies when both the failed attempts and the successful login came from the identical attacking IP, not just any brute-force alert and any login happening to occur near each other in time. When both conditions hold, the rule fires at level 12, a significant jump from `5715`'s level 3, and attaches two MITRE ATT&CK techniques: **T1110** (Brute Force) for the attack method, and **T1078** (Valid Accounts) for the fact that the attacker is now operating with a legitimate account's credentials, which is arguably the more dangerous half of the story, since a valid-account login is far harder to distinguish from normal user activity going forward.
+
+![Corrected Rule XML in local_rules.xml](ProjectImages/corrected-rule-xml-local-rules.png)
+
+### 4.5 Validating the Rule with `wazuh-logtest`
+
+Before trusting rule `100100` against live traffic, it was validated offline using `wazuh-logtest` (introduced in Section 3.6), which allows a rule's logic to be tested against real captured log lines without needing to re-run the attack live.
+
+The real `full_log` lines captured from the actual Hydra attack were fed into `wazuh-logtest` in sequence: the failed-login lines first, to build up past Wazuh's internal frequency threshold and trigger rule `5763`, followed by the single successful-login line. On the successful-login line, `wazuh-logtest` confirmed rule `100100` fired exactly as designed:
+
+```
+**Phase 3: Completed filtering (rules).**
+        id: '100100'
+        level: '12'
+        description: 'Successful SSH login from 192.168.64.3 following brute force attempts - possible account compromise'
+        groups: '['local', 'syslog', 'sshd', 'authentication_success', 'brute_force_success']'
+        firedtimes: '1'
+        frequency: '2'
+        mail: 'True'
+        mitre.id: '['T1110', 'T1078']'
+        mitre.tactic: '['Credential Access', 'Defense Evasion', 'Persistence', 'Privilege Escalation', 'Initial Access']'
+        mitre.technique: '['Brute Force', 'Valid Accounts']'
+**Alert to be generated.
+```
+
+![wazuh-logtest Output Rule 100100 Firing](ProjectImages/wazuh-logtest-rule-100100-firing.png)
+
+The output confirms all of the rule's design goals in one pass: the correct rule ID and elevated level fired (`100100`, level 12, versus `5715`'s level 3), the description correctly rendered the attacking source IP into the message, `**Alert to be generated` confirms it would actually produce a dashboard alert (not just a silent rule match), and both intended MITRE ATT&CK techniques (T1110, T1078) were attached automatically, expanding out to five MITRE tactics in total.
+
+This same behavior is confirmed a second time by the live alert itself once the rule was deployed and the attack re-triggered it for real. Rule `100100` appears directly in the Threat Hunting **Events** list alongside the routine `5760`/`5715` traffic around it, exactly where an analyst would encounter it in practice:
+
+![Rule 100100 Appearing in the Events List](ProjectImages/rule-100100-in-events-list.png)
+
+And the full alert record confirms every field matches what `wazuh-logtest` predicted, now with the actual timestamp, agent, and source IP attached: `rule.id` `100100`, `rule.level` `12`, `rule.groups` including `brute_force_success`, and `rule.mitre.id` `T1110, T1078`.
+
+![Rule 100100 Full Alert Detail](ProjectImages/rule-100100-alert-detail.png)
+
+### 4.6 Before / After: Dashboard Impact
+
+Comparing the Threat Hunting dashboard before (Section 4.3) and after the attack makes the detection chain's effect on the overall alert picture concrete. After the attack, total events for the window rose from 7 to **26**, authentication failures rose from 3 to **19** (the Hydra password-guessing attempts), and authentication successes rose from 2 to **4**.
+
+![Threat Hunting Dashboard After the Attack](ProjectImages/threat-hunting-dashboard-after.png)
+
+The **Top 10 MITRE ATT&CKS** panel breaks this down by technique: **Password Guessing** (16 occurrences) and **SSH** (11) dominate, reflecting the volume of individual failed Hydra attempts, while **Valid Accounts** (4), **Brute Force** (3), and **Remote Services** (2) mark the smaller number of alerts, including rule `100100`, tied to the attack actually succeeding.
+
+![Top 10 MITRE ATT&CK Techniques Table](ProjectImages/top-10-mitre-attacks-table.png)
+
+Live re-running of the Hydra attack against the dashboard end-to-end was also captured directly (rather than relying on `wazuh-logtest` alone): the events list, the individual `5763` and `5715` alert records, and the `100100` alert record above are all pulled from that live run, so this project has both offline rule-logic validation *and* live-traffic proof that the full pipeline, from Hydra's first failed attempt through the custom rule firing, works end to end.
+
+### 4.7 Summary: MITRE ATT&CK Mapping
+
+| Rule ID | Level | Trigger | MITRE Technique(s) |
+|---|---|---|---|
+| `5760` | 5 | Single failed SSH login attempt | — |
+| `5763` | 10 | 8 failed attempts from same source IP cross frequency threshold | T1110 – Brute Force |
+| `5715` | 3 | Any successful SSH login (default, no context) | T1078 – Valid Accounts, T1021 – Remote Services |
+| `100100` (custom) | 12 | Successful login (`5715`) immediately preceded by brute force (`5763`) from same source IP | T1110 – Brute Force, T1078 – Valid Accounts |
+
+The end-to-end result is a detection chain that mirrors how a real analyst would reason about this incident: individual failures are noise, a burst of failures is a brute-force attempt worth flagging, and a login that succeeds right after that burst isn't just "a login," it's a likely account compromise that deserves a level-12 alert and an explicit MITRE ATT&CK trail, rather than getting lost at the same severity as a routine sign-in.
 
 ---
 
