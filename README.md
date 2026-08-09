@@ -387,7 +387,7 @@ The end-to-end result is a detection chain that mirrors how a real analyst would
 - Ubuntu's guided LVM partitioning under-allocated disk space twice in a row, once within the existing virtual disk, and again after the virtual disk itself was resized, each time causing the dashboard installation or login to fail with a misleading error rather than a clear "disk full" message.
 - A GRUB reboot loop occurred after the initial Ubuntu install simply because the installation ISO wasn't ejected before the first reboot.
 
-None of these are flaws in Wazuh as a tool, but they're a realistic reminder that "free and open-source" often trades setup complexity for licensing cost, and that platform-specific quirks (ARM64, in this case) can consume as much project time as the actual security work.
+None of these are flaws in Wazuh as a tool.
 
 ---
 
