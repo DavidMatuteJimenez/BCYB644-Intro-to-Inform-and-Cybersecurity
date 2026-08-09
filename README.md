@@ -14,7 +14,7 @@ It's built around three main pieces: a lightweight **agent** installed on each m
 
 Wazuh's core job is turning scattered, raw log data into something an analyst can act on: catching repeated failed logins before they turn into a breach, giving a team one place to look instead of checking a dozen systems individually, tagging alerts with MITRE ATT&CK context for deeper meaning, and allowing custom rules for anything the default ruleset doesn't cover.
 
-In the incident response lifecycle, Wazuh sits mainly in the **Identification** phase, since its core function is turning raw logs into an actionable alert. That's exactly what this project demonstrates: Wazuh detects an SSH brute-force attack against a simulated victim endpoint, generates an alert, and supports the follow-up work covered in later sections (a custom rule and MITRE mapping).
+Wazuh's core function, turning raw logs into an actionable alert, sits it mainly in the **Identification** phase of the incident response lifecycle, and that's exactly what this project demonstrates in Section 4: Wazuh detects an SSH brute-force attack against a simulated victim endpoint and generates an alert. But Identification isn't the only phase Wazuh touches. Section 5 walks through how other features covered in Section 3, Configuration Assessment, active response, and File Integrity Monitoring, extend Wazuh's role into Preparation, Containment, and Eradication as well, even where this project's hands-on demo focused on Identification specifically.
 
 ---
 
@@ -298,6 +298,8 @@ This produced no match during testing. The bug was a conceptual mix-up rather th
 </rule>
 ```
 
+The full rule file is available at [`local_rules.xml`](local_rules.xml).
+
 In plain terms, rule `100100` only evaluates on events that already matched rule `5715` (a successful login), and only fires if rule `5763` (brute-force detected) had also matched recently for the same source IP. The `<same_source_ip />` tag ensures the correlation only applies when both the failed attempts and the successful login came from the identical attacking IP, not just any brute-force alert and any login happening to occur near each other in time. When both conditions hold, the rule fires at level 12, a significant jump from `5715`'s level 3, and attaches two MITRE ATT&CK techniques: **T1110** (Brute Force) for the attack method, and **T1078** (Valid Accounts) for the fact that the attacker is now operating with a legitimate account's credentials. That second technique is arguably the more dangerous half of the story, since a valid-account login is far harder to distinguish from normal user activity going forward.
 
 ### 4.5 Validating the Rule with `wazuh-logtest`
@@ -356,9 +358,13 @@ The live re-run of the Hydra attack was also captured directly, rather than rely
 
 The end-to-end result is a detection chain that mirrors how a real analyst would reason about this incident: individual failures are noise, a burst of failures is a brute-force attempt worth flagging, and a login that succeeds right after that burst isn't just "a login." It's a likely account compromise that deserves a level-12 alert and an explicit MITRE ATT&CK trail, rather than getting lost at the same severity as a routine sign-in.
 
+A level-12 rule `100100` alert is the kind of event that should trigger a real response, not just get logged. In practice, an analyst seeing this fire would: force an immediate password reset (and treat the account as compromised until proven otherwise), review `dmatute`'s login history and command activity for anything beyond the initial SSH session, and block or rate-limit `192.168.64.3` at the firewall while the investigation continues. Wazuh doesn't take those response actions automatically in this project's configuration (see the active-response note in Section 5.2), but rule `100100` is exactly the kind of high-confidence signal that would justify triggering them, either manually or through an active-response script tied to this rule ID.
+
 ---
 
 ## 5. Strengths & Limitations
+
+Section 1 situates Wazuh mainly in the **Identification** phase of the IR lifecycle, since that's the phase this project's hands-on work directly demonstrates. But Wazuh's broader feature set touches other phases too, even where this project didn't build a full demo around them. Configuration Assessment (Section 3.2) supports **Preparation**, by catching misconfigurations before an incident happens rather than after. Active response, discussed as a scope tradeoff below, supports **Containment**, since it would act on an alert automatically instead of waiting for a human to intervene. File Integrity Monitoring, also scoped out below, supports **Eradication**, by catching an attacker's follow-on changes to a system after initial access, the exact kind of activity a compromised account like `dmatute` could go on to perform. This project's own contribution sits specifically at the Identification/Containment boundary: rule `100100` identifies the compromise, and the analyst-response steps outlined at the end of Section 4 are what Containment would look like next.
 
 ### 5.1 Strengths
 
@@ -376,9 +382,9 @@ The end-to-end result is a detection chain that mirrors how a real analyst would
 
 **Single-host, dual-role architecture.** Due to the 8GB RAM constraint on the host machine, VM1 served as both the Wazuh manager and the monitored "victim" endpoint (Section 2.10), rather than deploying the manager and a separately-installed agent on two distinct systems as a production environment would. This is a reasonable hardware-driven scope decision, but it does mean this project doesn't demonstrate a truly independent agent deployment, agent-to-manager network configuration, or what monitoring multiple distinct endpoints from one manager looks like.
 
-**No active-response demo.** Wazuh supports automated active response, for example, automatically blocking an attacking IP via firewall rule once a brute-force alert fires, which would have been a natural next step after rule `100100`. This was deliberately scoped out to keep the project focused on the detection and correlation side of the pipeline rather than the response side, given the time available.
+**No active-response demo.** Wazuh supports automated active response, for example, automatically blocking an attacking IP via firewall rule once a brute-force alert fires, which would have been a natural next step after rule `100100`. This maps to the **Containment** phase of the IR lifecycle, catching and stopping an attacker as it happens rather than only recording that it happened. It was deliberately scoped out to keep the project focused on the detection and correlation side of the pipeline rather than the response side, given the time available.
 
-**No File Integrity Monitoring demo.** Section 3.2 covers FIM as a core Wazuh feature, particularly relevant to detecting post-compromise activity like backdoors or tampered binaries, but this project's scenario stopped at the point of successful login and didn't simulate any follow-on attacker activity on the compromised account that FIM would have caught.
+**No File Integrity Monitoring demo.** Section 3.2 covers FIM as a core Wazuh feature, particularly relevant to detecting post-compromise activity like backdoors or tampered binaries. That kind of detection maps to the **Eradication** phase, confirming an attacker's follow-on changes have actually been found and removed, not just that the initial break-in was flagged. This project's scenario stopped at the point of successful login and didn't simulate any follow-on attacker activity on the compromised account that FIM would have caught.
 
 **Default rule severity gap (the project's central finding).** The most significant limitation uncovered wasn't a limitation of the lab setup, but of Wazuh's out-of-the-box ruleset itself: a successful SSH login is treated identically (rule `5715`, level 3) whether it's a legitimate morning sign-in or the direct result of a brute-force attack that just triggered a level-10 alert seconds earlier (Section 4.3). Nothing in the default rules connects the two. This is exactly the kind of blind spot a real SOC analyst would need to catch manually, or, as this project did, close with a custom correlation rule.
 
