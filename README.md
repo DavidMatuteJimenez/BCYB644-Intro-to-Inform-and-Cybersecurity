@@ -1,8 +1,8 @@
 # Wazuh IR Lab: Detecting SSH Brute-Force Attacks on a Compromised Endpoint
  
-**Tool:** Wazuh (open-source SIEM/XDR)
-**Author:** David Matute-Jimenez
-**Course:** BCYB644-Intro-to-Inform-and-Cybersecurity
+**Tool:** Wazuh (open-source SIEM/XDR)  
+**Author:** David Matute-Jimenez  
+**Course:** BCYB644-Intro-to-Inform-and-Cybersecurity. 
 
 ---
  
@@ -419,7 +419,4 @@ None of these are actually Wazuh's fault, just the tradeoff of running it on App
 - THC-Hydra (SSH brute-force tool used in Section 4.2): https://github.com/vanhauser-thc/thc-hydra
 **AI assistance**
 - Claude (Anthropic): used throughout the project for troubleshooting help: https://claude.ai
----
- 
-✒️ **Author**
-David Matute-Jimenez
+
