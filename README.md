@@ -3,7 +3,7 @@
 **Tool:** Wazuh (open-source SIEM/XDR)
 **Author:** David Matute-Jimenez
 **Course:** BCYB644-Intro-to-Inform-and-Cybersecurity
- 
+
 ---
  
 ## 1. Tool Overview
