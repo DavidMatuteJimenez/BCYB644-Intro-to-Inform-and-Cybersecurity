@@ -403,15 +403,18 @@ None of these are actually Wazuh's fault, just the tradeoff of running it on App
 - Wazuh Ruleset & Decoders Documentation: https://documentation.wazuh.com/current/user-manual/ruleset/index.html
 - Wazuh `wazuh-logtest` Reference: https://documentation.wazuh.com/current/user-manual/reference/tools/wazuh-logtest.html
 - Wazuh 4.14 ARM64-compatible installer: https://packages.wazuh.com/4.14/wazuh-install.sh
+
 **MITRE ATT&CK Framework**
 - MITRE ATT&CK, T1110 (Brute Force): https://attack.mitre.org/techniques/T1110/
 - MITRE ATT&CK, T1078 (Valid Accounts): https://attack.mitre.org/techniques/T1078/
 - MITRE ATT&CK, T1021 (Remote Services): https://attack.mitre.org/techniques/T1021/
+
 **Virtualization & OS setup**
 - UTM for macOS: https://mac.getutm.app/
 - Ubuntu Server 24.04.4 LTS download (ARM64): https://ubuntu.com/download/server
 - Kali Linux, official UTM installation guide: https://www.kali.org/docs/virtualization/install-utm-guest-vm/
 - Kali Linux, installation and setup guide: https://www.kali.org/docs/installation/hard-disk-install/
+
 **Attack tooling**
 - THC-Hydra (SSH brute-force tool used in Section 4.2): https://github.com/vanhauser-thc/thc-hydra
 **AI assistance**
