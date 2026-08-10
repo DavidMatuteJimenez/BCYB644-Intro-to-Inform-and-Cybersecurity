@@ -21,7 +21,6 @@ That core function, raw logs to actionable alert, puts Wazuh mainly in the **Ide
 ## 2. Tool Requirements, Setup & Workflow
  
 ### VM Setup
-**Author: David**
  
 ## To Run This Project (Step-By-Step Guide)
  
