@@ -1,8 +1,8 @@
 # Wazuh IR Lab: Detecting SSH Brute-Force Attacks on a Compromised Endpoint
 
-**Tool:** Wazuh (open-source SIEM/XDR)
-**Author:** David Matute-Jimenez
-**Course:** BCYB644-Intro-to-Inform-and-Cybersecurity.
+**Tool:** Wazuh (open-source SIEM/XDR)  
+**Author:** David Matute-Jimenez  
+**Course:** BCYB644-Intro-to-Inform-and-Cybersecurity.  
 
 ---
 
